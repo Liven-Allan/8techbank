@@ -10,39 +10,68 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="auth-body">
-    <div class="auth-card">
-        <div class="auth-header">
-            <h1 class="auth-logo">8TECHBANK</h1>
-            <p class="auth-subtitle">NEW ACCOUNT REGISTRATION</p>
+    <div class="auth-split">
+
+        <!-- LEFT — Brand imagery -->
+        <div class="auth-visual">
+            <div class="auth-visual-inner">
+                <div class="auth-brand">
+                    <span class="auth-brand-logo">8TECHBANK</span>
+                    <span class="auth-brand-tagline">SECURE · FAST · RELIABLE</span>
+                </div>
+                <div class="auth-images">
+                    <div class="auth-img-wrap">
+                        <img src="{{ url_for('static', filename='handshake.jpeg') }}" alt="Trust & Partnership" class="auth-img">
+                        <p class="auth-img-caption">TRUSTED PARTNERSHIPS</p>
+                    </div>
+                    <div class="auth-img-divider"></div>
+                    <div class="auth-img-wrap">
+                        <img src="{{ url_for('static', filename='wallet2.jpeg') }}" alt="Digital Wallet" class="auth-img">
+                        <p class="auth-img-caption">DIGITAL FINANCE</p>
+                    </div>
+                </div>
+                <p class="auth-visual-footer">© 2026 8TechBank. All rights reserved.</p>
+            </div>
         </div>
-        {% if error %}
-        <div class="alert alert-danger">{{ error }}</div>
-        {% endif %}
-        {% if success %}
-        <div class="alert alert-success">{{ success }}</div>
-        {% endif %}
-        <form method="POST" action="{{ url_for('auth.register') }}">
-            <div class="form-group">
-                <label class="micro-label">USERNAME</label>
-                <input type="text" name="username" class="form-input" placeholder="Choose a username" autocomplete="off" required>
+
+        <!-- RIGHT — Register form -->
+        <div class="auth-form-panel">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1 class="auth-logo">8TECHBANK</h1>
+                    <p class="auth-subtitle">NEW ACCOUNT REGISTRATION</p>
+                </div>
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                {% if success %}
+                <div class="alert alert-success">{{ success }}</div>
+                {% endif %}
+                <form method="POST" action="{{ url_for('auth.register') }}">
+                    <div class="form-group">
+                        <label class="micro-label">USERNAME</label>
+                        <input type="text" name="username" class="form-input" placeholder="Choose a username" autocomplete="off" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="micro-label">DISPLAY NAME</label>
+                        <input type="text" name="display_name" class="form-input" placeholder="Full name (optional)">
+                    </div>
+                    <div class="form-group">
+                        <label class="micro-label">EMAIL ADDRESS</label>
+                        <input type="email" name="email" class="form-input" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="micro-label">PASSWORD</label>
+                        <input type="password" name="password" class="form-input" placeholder="Choose a password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">CREATE ACCOUNT</button>
+                </form>
+                <div class="auth-footer">
+                    <a href="{{ url_for('auth.login') }}">← Back to login</a>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="micro-label">DISPLAY NAME</label>
-                <input type="text" name="display_name" class="form-input" placeholder="Full name (optional)">
-            </div>
-            <div class="form-group">
-                <label class="micro-label">EMAIL ADDRESS</label>
-                <input type="email" name="email" class="form-input" placeholder="your@email.com" required>
-            </div>
-            <div class="form-group">
-                <label class="micro-label">PASSWORD</label>
-                <input type="password" name="password" class="form-input" placeholder="Choose a password" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-full">CREATE ACCOUNT</button>
-        </form>
-        <div class="auth-footer">
-            <a href="{{ url_for('auth.login') }}">← Back to login</a>
         </div>
+
     </div>
 </body>
 </html>
