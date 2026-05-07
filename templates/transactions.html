@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Transactions — 8TechBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">TRANSACTION HISTORY</h2>
+    <span class="page-subtitle">
+        {% if viewed_user %}
+            Viewing: {{ viewed_user.display_name }} ({{ viewed_user.account_number }})
+        {% endif %}
+    </span>
+</div>
+
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>TXN ID</th>
+                <th>TIMESTAMP</th>
+                <th>TYPE</th>
+                <th>COUNTERPARTY</th>
+                <th>MEMO</th>
+                <th>AMOUNT</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for txn in transactions %}
+            <tr>
+                <td class="mono">#{{ txn.id }}</td>
+                <td class="muted">{{ txn.timestamp }}</td>
+                <td>
+                    {% if txn.sender_id == user_id|int %}
+                        <span class="badge badge-out">DEBIT</span>
+                    {% else %}
+                        <span class="badge badge-in">CREDIT</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if txn.sender_id == user_id|int %}
+                        {{ txn.receiver_name }} ({{ txn.receiver_acct }})
+                    {% else %}
+                        {{ txn.sender_name }} ({{ txn.sender_acct }})
+                    {% endif %}
+                </td>
+                {# VULN: XSS — unsanitized user input rendered with | safe #}
+                <td class="memo-cell">{{ txn.memo | safe }}</td>
+                <td class="{% if txn.sender_id == user_id|int %}amount-out{% else %}amount-in{% endif %}">
+                    {% if txn.sender_id == user_id|int %}-{% else %}+{% endif %}${{ "%.2f"|format(txn.amount) }}
+                </td>
+                <td><span class="badge badge-active">SETTLED</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="muted center">No transactions found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    {% if page > 1 %}
+    <a href="{{ url_for('transactions.transactions', user_id=user_id, page=page-1) }}" class="btn btn-ghost">← PREVIOUS</a>
+    {% else %}
+    <span class="btn btn-ghost disabled">← PREVIOUS</span>
+    {% endif %}
+    <span class="page-indicator">PAGE {{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('transactions.transactions', user_id=user_id, page=page+1) }}" class="btn btn-ghost">NEXT →</a>
+    {% else %}
+    <span class="btn btn-ghost disabled">NEXT →</span>
+    {% endif %}
+</div>
+{% endblock %}

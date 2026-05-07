@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Admin Console — 8TechBank{% endblock %}
+{% block content %}
+<div class="page-header admin-header">
+    <h2 class="page-title">ADMIN CONSOLE — RESTRICTED ACCESS</h2>
+    <span class="page-subtitle danger">Full System Access · Use Responsibly</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="micro-label">USER SEARCH</span>
+    </div>
+    <form method="GET" action="{{ url_for('admin.admin') }}" class="search-form">
+        <input type="text" name="search" class="form-input" placeholder="Search by username or email..."
+               value="{{ search or '' }}" autocomplete="off">
+        <button type="submit" class="btn btn-primary">SEARCH</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="micro-label">ALL USERS</span>
+    </div>
+    <table class="data-table admin-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>USERNAME</th>
+                <th>EMAIL</th>
+                <th>BALANCE</th>
+                <th>ROLE</th>
+                {# VULN: Sensitive data exposure — password hash visible in admin panel #}
+                <th>PASSWORD HASH</th>
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td class="mono">{{ u.id }}</td>
+                <td>{{ u.username }}</td>
+                <td class="muted">{{ u.email }}</td>
+                <td class="accent mono">${{ "%.2f"|format(u.balance) }}</td>
+                <td>
+                    {% if u.role == 'admin' %}
+                    <span class="badge badge-danger">ADMIN</span>
+                    {% else %}
+                    <span class="badge badge-muted">USER</span>
+                    {% endif %}
+                </td>
+                <td class="mono hash-cell">{{ u.password_hash }}</td>
+                <td>
+                    <a href="{{ url_for('transactions.transactions', user_id=u.id) }}" class="btn-link">VIEW TXNS</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="micro-label">RECENT TRANSACTION LOG (LAST 50)</span>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>TXN ID</th>
+                <th>TIMESTAMP</th>
+                <th>FROM</th>
+                <th>TO</th>
+                <th>AMOUNT</th>
+                <th>MEMO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for txn in transactions %}
+            <tr>
+                <td class="mono">#{{ txn.id }}</td>
+                <td class="muted">{{ txn.timestamp }}</td>
+                <td>{{ txn.sender_name }} ({{ txn.sender_acct }})</td>
+                <td>{{ txn.receiver_name }} ({{ txn.receiver_acct }})</td>
+                <td class="accent mono">${{ "%.2f"|format(txn.amount) }}</td>
+                {# VULN: XSS — unsanitized user input rendered with | safe #}
+                <td class="memo-cell">{{ txn.memo | safe }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8TechBank — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-body">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-logo">8TECHBANK</h1>
+            <p class="auth-subtitle">SECURE BANKING PORTAL v2.1.0</p>
+        </div>
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="form-group">
+                <label class="micro-label">USERNAME</label>
+                <input type="text" name="username" class="form-input" placeholder="Enter username" autocomplete="off" required>
+            </div>
+            <div class="form-group">
+                <label class="micro-label">PASSWORD</label>
+                <input type="password" name="password" class="form-input" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">AUTHENTICATE</button>
+        </form>
+        <div class="auth-footer">
+            <a href="{{ url_for('auth.register') }}">Create new account →</a>
+        </div>
+    </div>
+</body>
+</html>

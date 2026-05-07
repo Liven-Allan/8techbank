@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Profile — 8TechBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">ACCOUNT PROFILE</h2>
+    <span class="page-subtitle">Manage Your Details</span>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+
+<div class="profile-layout">
+    <div class="profile-form-col">
+        <div class="card">
+            <div class="card-header">
+                <span class="micro-label">EDIT PROFILE</span>
+            </div>
+            <form method="POST" action="{{ url_for('profile.profile') }}">
+                <div class="form-group">
+                    <label class="micro-label">DISPLAY NAME</label>
+                    {# VULN: XSS — display_name rendered unsanitized with | safe #}
+                    <input type="text" name="display_name" class="form-input"
+                           value="{{ user.display_name }}">
+                </div>
+                <div class="form-group">
+                    <label class="micro-label">EMAIL ADDRESS</label>
+                    <input type="email" name="email" class="form-input"
+                           value="{{ user.email }}">
+                </div>
+                <button type="submit" class="btn btn-primary">UPDATE PROFILE</button>
+            </form>
+        </div>
+    </div>
+    <div class="profile-info-col">
+        <div class="card">
+            <div class="card-header">
+                <span class="micro-label">ACCOUNT DETAILS</span>
+            </div>
+            <div class="info-rows">
+                <div class="info-row">
+                    <span class="micro-label">DISPLAY NAME</span>
+                    {# VULN: XSS — unsanitized user input rendered with | safe #}
+                    <span class="info-value">{{ user.display_name | safe }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="micro-label">USERNAME</span>
+                    <span class="info-value mono">{{ user.username }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="micro-label">EMAIL</span>
+                    <span class="info-value">{{ user.email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="micro-label">ACCOUNT NUMBER</span>
+                    <span class="info-value mono accent">{{ user.account_number }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="micro-label">ROLE</span>
+                    <span class="info-value">{{ user.role | upper }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="micro-label">MEMBER SINCE</span>
+                    <span class="info-value muted">{{ user.created_at[:10] }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="micro-label">API ENDPOINT</span>
+                    <a href="{{ url_for('api.api_user_profile') }}" class="info-value link">/api/user/profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

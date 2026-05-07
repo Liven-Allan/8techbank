@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  8techbank:
+    build: .
+    container_name: 8techbank_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./static:/app/static
+      - ./templates:/app/templates
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: "1"
+      SECRET_KEY: bank123
+      DATABASE_PATH: /app/data/8techbank.db
+    restart: unless-stopped
