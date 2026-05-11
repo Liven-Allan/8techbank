@@ -1,5 +1,5 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template
-from database import get_db, md5_hash, raw_query
+from database import get_db, raw_query
 import random
 
 auth_bp = Blueprint('auth', __name__)
@@ -18,10 +18,10 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
-        password_hash = md5_hash(password)
 
         # VULN: SQL Injection — raw string concatenation
-        query = "SELECT * FROM users WHERE username='" + username + "' AND password_hash='" + password_hash + "'"
+        # VULN: Plaintext password comparison
+        query = "SELECT * FROM users WHERE username='" + username + "' AND password='" + password + "'"
         user = raw_query(query, fetchone=True)
 
         if user:
@@ -51,14 +51,13 @@ def register():
         if not username or not email or not password:
             error = 'All fields are required.'
         else:
-            # VULN: Weak password hashing — MD5, no salt
-            password_hash = md5_hash(password)
+            # VULN: Plaintext password storage — no hashing
             account_number = '8TB-' + str(random.randint(100000, 999999))
             balance = round(random.uniform(1000, 5000), 2)
 
             try:
                 # VULN: SQL Injection — raw string concatenation
-                query = "INSERT INTO users (username, email, password_hash, display_name, account_number, balance, role) VALUES ('" + username + "', '" + email + "', '" + password_hash + "', '" + display_name + "', '" + account_number + "', " + str(balance) + ", 'user')"
+                query = "INSERT INTO users (username, email, password, display_name, account_number, balance, role) VALUES ('" + username + "', '" + email + "', '" + password + "', '" + display_name + "', '" + account_number + "', " + str(balance) + ", 'user')"
                 raw_query(query)
                 success = 'Account created successfully. You can now log in.'
             except Exception as e:

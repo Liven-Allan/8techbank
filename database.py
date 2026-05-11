@@ -1,5 +1,4 @@
 import sqlite3
-import hashlib
 import random
 import os
 from datetime import datetime, timedelta
@@ -18,8 +17,8 @@ def get_db():
 
 
 def md5_hash(password):
-    # VULN: Weak password hashing — MD5, no salt
-    return hashlib.md5(password.encode()).hexdigest()
+    # VULN: Plaintext password storage — no hashing applied
+    return password
 
 
 def init_db():
@@ -51,7 +50,7 @@ def seed_db():
 
     for u in users:
         # VULN: SQL Injection — raw string concatenation
-        query = "INSERT OR IGNORE INTO users (username, email, password_hash, display_name, account_number, balance, role) VALUES ('" + u[0] + "', '" + u[1] + "', '" + u[2] + "', '" + u[3] + "', '" + u[4] + "', " + str(u[5]) + ", '" + u[6] + "')"
+        query = "INSERT OR IGNORE INTO users (username, email, password, display_name, account_number, balance, role) VALUES ('" + u[0] + "', '" + u[1] + "', '" + u[2] + "', '" + u[3] + "', '" + u[4] + "', " + str(u[5]) + ", '" + u[6] + "')"
         conn.execute(query)
 
     conn.commit()

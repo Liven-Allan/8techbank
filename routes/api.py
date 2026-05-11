@@ -12,13 +12,13 @@ def api_user_profile():
     user_id = session['user_id']
 
     # VULN: SQL Injection — raw string concatenation
-    # VULN: Sensitive data exposure — password hash leaked in API response
+    # VULN: Sensitive data exposure — plaintext password leaked in API response
     user = raw_query("SELECT * FROM users WHERE id=" + str(user_id), fetchone=True)
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    # Return full DB row including password_hash — intentional data leak
+    # Return full DB row including plaintext password — intentional data leak
     return jsonify({
         'id': user['id'],
         'username': user['username'],
@@ -28,6 +28,6 @@ def api_user_profile():
         'balance': user['balance'],
         'role': user['role'],
         'created_at': user['created_at'],
-        # VULN: Sensitive data exposure — password hash leaked in API response
-        'password_hash': user['password_hash'],
+        # VULN: Sensitive data exposure — plaintext password leaked in API response
+        'password': user['password'],
     })

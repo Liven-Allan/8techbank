@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
+    password TEXT NOT NULL,
     display_name TEXT NOT NULL,
     account_number TEXT NOT NULL UNIQUE,
     balance REAL NOT NULL DEFAULT 1000.00,
