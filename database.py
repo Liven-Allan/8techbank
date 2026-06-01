@@ -2,6 +2,7 @@ import sqlite3
 import random
 import os
 from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash
 
 DATABASE_PATH = os.environ.get('DATABASE_PATH', './data/8techbank.db')
 
@@ -17,8 +18,9 @@ def get_db():
 
 
 def md5_hash(password):
-    # VULN: Plaintext password storage — no hashing applied
-    return password
+    # Replace the old placeholder with a secure password hash for seeds.
+    # Name kept for compatibility with existing calls.
+    return generate_password_hash(password)
 
 
 def init_db():
@@ -49,9 +51,12 @@ def seed_db():
     ]
 
     for u in users:
-        # VULN: SQL Injection — raw string concatenation
-        query = "INSERT OR IGNORE INTO users (username, email, password, display_name, account_number, balance, role) VALUES ('" + u[0] + "', '" + u[1] + "', '" + u[2] + "', '" + u[3] + "', '" + u[4] + "', " + str(u[5]) + ", '" + u[6] + "')"
-        conn.execute(query)
+        # Use parameterised queries to avoid SQL injection and ensure proper
+        # handling of special characters in seed data.
+        conn.execute(
+            "INSERT OR IGNORE INTO users (username, email, password, display_name, account_number, balance, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (u[0], u[1], u[2], u[3], u[4], u[5], u[6])
+        )
 
     conn.commit()
 
@@ -78,9 +83,12 @@ def seed_db():
         amount = round(random.uniform(10, 800), 2)
         memo = memos[i % len(memos)]
         ts = (base_time + timedelta(hours=i * 13)).strftime('%Y-%m-%d %H:%M:%S')
-        # VULN: SQL Injection — raw string concatenation
-        query = "INSERT INTO transactions (sender_id, receiver_id, amount, memo, timestamp) VALUES (" + str(sender_id) + ", " + str(receiver_id) + ", " + str(amount) + ", '" + memo + "', '" + ts + "')"
-        conn.execute(query)
+        # Parameterised insert to avoid SQL injection and correctly handle
+        # quotes/unicode in the memo field.
+        conn.execute(
+            "INSERT INTO transactions (sender_id, receiver_id, amount, memo, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (sender_id, receiver_id, amount, memo, ts),
+        )
 
     conn.commit()
     conn.close()
@@ -91,14 +99,18 @@ def raw_query(sql, fetchone=False):
     """Execute a raw SQL query and return results. No parameterization — intentional."""
     conn = get_db()
     try:
-        cur = conn.execute(sql)
+        # Support optional parameters by allowing callers to pass a tuple via
+        # the `sql` argument as (sql_text, params). This keeps the simple
+        # existing call-site shape while enabling parameterisation.
+        if isinstance(sql, (list, tuple)) and len(sql) == 2:
+            sql_text, params = sql
+            cur = conn.execute(sql_text, params)
+        else:
+            cur = conn.execute(sql)
         conn.commit()
         if fetchone:
             return cur.fetchone()
         return cur.fetchall()
-    except Exception as e:
-        conn.close()
-        raise e
     finally:
         conn.close()
 
@@ -107,7 +119,11 @@ def raw_query_write(sql):
     """Execute a raw write SQL query (INSERT/UPDATE/DELETE)."""
     conn = get_db()
     try:
-        conn.execute(sql)
+        if isinstance(sql, (list, tuple)) and len(sql) == 2:
+            sql_text, params = sql
+            conn.execute(sql_text, params)
+        else:
+            conn.execute(sql)
         conn.commit()
     finally:
         conn.close()

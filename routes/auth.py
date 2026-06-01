@@ -1,6 +1,10 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template
 from database import get_db, raw_query
 import random
+from extensions import limiter
+import re
+import unicodedata
+from werkzeug.security import generate_password_hash, check_password_hash
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -13,16 +17,51 @@ def index():
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"], error_message="Too many login attempts. Please wait 60 seconds.")
 def login():
     error = None
     if request.method == 'POST':
-        username = request.form.get('username', '')
-        password = request.form.get('password', '')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
 
-        # VULN: SQL Injection — raw string concatenation
-        # VULN: Plaintext password comparison
-        query = "SELECT * FROM users WHERE username='" + username + "' AND password='" + password + "'"
-        user = raw_query(query, fetchone=True)
+        # Normalize Unicode to avoid unusual grapheme abuses and ensure
+        # length checks operate on a consistent representation.
+        username = unicodedata.normalize('NFC', username)
+        password = unicodedata.normalize('NFC', password)
+
+        # Server-side input validation
+        if username == '' or password == '':
+            error = 'Fields cannot be empty'
+            return render_template('login.html', error=error), 400
+
+        if len(username) > 150 or len(password) > 150:
+            error = 'Input too large'
+            return render_template('login.html', error=error), 422
+
+        # Disallow control characters, NUL bytes, and limit to allowed charset.
+        if '\x00' in username or '\x00' in password:
+            error = 'Invalid input'
+            return render_template('login.html', error=error), 422
+
+        # Only allow ASCII alphanumerics and a few safe punctuation characters.
+        if not re.match(r'^[A-Za-z0-9_.-]{1,150}$', username):
+            error = 'Invalid username format'
+            return render_template('login.html', error=error), 422
+
+        # Lookup user by username and verify hashed password
+        conn = get_db()
+        cur = conn.execute('SELECT * FROM users WHERE username = ?', (username,))
+        user = cur.fetchone()
+        if user and check_password_hash(user['password'], password):
+            # Successful auth
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['display_name'] = user['display_name']
+            session['account_number'] = user['account_number']
+            session['role'] = user['role']
+            conn.close()
+            return redirect(url_for('dashboard.dashboard'))
+        conn.close()
 
         if user:
             session['user_id'] = user['id']
@@ -48,6 +87,20 @@ def register():
         password = request.form.get('password', '').strip()
         display_name = request.form.get('display_name', '').strip() or username
 
+        # Server-side validation
+        if not username or not email or not password:
+            error = 'All fields are required.'
+            return render_template('register.html', error=error), 400
+
+        if len(username) > 150 or len(password) > 150 or len(email) > 254:
+            error = 'Input too large'
+            return render_template('register.html', error=error), 422
+
+        # Simple email format check
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            error = 'Invalid email format'
+            return render_template('register.html', error=error), 422
+
         if not username or not email or not password:
             error = 'All fields are required.'
         else:
@@ -56,9 +109,13 @@ def register():
             balance = round(random.uniform(1000, 5000), 2)
 
             try:
-                # VULN: SQL Injection — raw string concatenation
-                query = "INSERT INTO users (username, email, password, display_name, account_number, balance, role) VALUES ('" + username + "', '" + email + "', '" + password + "', '" + display_name + "', '" + account_number + "', " + str(balance) + ", 'user')"
-                raw_query(query)
+                # Store hashed password using werkzeug
+                hashed = generate_password_hash(password)
+                conn = get_db()
+                conn.execute('INSERT INTO users (username, email, password, display_name, account_number, balance, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                             (username, email, hashed, display_name, account_number, balance, 'user'))
+                conn.commit()
+                conn.close()
                 success = 'Account created successfully. You can now log in.'
             except Exception as e:
                 if 'UNIQUE' in str(e):
@@ -72,4 +129,10 @@ def register():
 @auth_bp.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('auth.login'))
+    # Return a redirect with no-cache headers to reduce likelihood of the
+    # browser showing a cached authenticated page when the user presses Back.
+    resp = redirect(url_for('auth.login'))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
