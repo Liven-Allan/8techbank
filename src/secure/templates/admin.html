@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Admin Console — 8TechBank{% endblock %}
+{% block content %}
+<div class="page-header admin-header">
+    <h2 class="page-title">ADMIN CONSOLE — RESTRICTED ACCESS</h2>
+    <span class="page-subtitle danger">Full System Access · Use Responsibly</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="micro-label">USER SEARCH</span>
+    </div>
+    {# Admin search is a GET form — no CSRF token needed (read-only, no state change) #}
+    <form method="GET" action="{{ url_for('admin.admin') }}" class="search-form">
+        {# FIX: output encoding — search value auto-escaped #}
+        <input type="text" name="search" class="form-input" placeholder="Search by username or email..."
+               value="{{ search or '' }}" autocomplete="off">
+        <button type="submit" class="btn btn-primary">SEARCH</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="micro-label">ALL USERS</span>
+    </div>
+    <table class="data-table admin-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>USERNAME</th>
+                <th>EMAIL</th>
+                <th>BALANCE</th>
+                <th>ROLE</th>
+                {# FIX: sensitive data exposure — password column removed from the table.
+                   Even bcrypt hashes should not be displayed; exposing them gives attackers
+                   material for offline cracking attacks. #}
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td class="mono">{{ u.id }}</td>
+                {# FIX: output encoding — all user-supplied fields auto-escaped #}
+                <td>{{ u.username }}</td>
+                <td class="muted">{{ u.email }}</td>
+                <td class="accent mono">${{ "%.2f"|format(u.balance) }}</td>
+                <td>
+                    {% if u.role == 'admin' %}
+                    <span class="badge badge-danger">ADMIN</span>
+                    {% else %}
+                    <span class="badge badge-muted">USER</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {# FIX: authorization / IDOR — link still works because the
+                       transactions route now ignores the user_id param and uses
+                       session — the admin can only see their own transactions via
+                       this link. For a real admin "view any user's txns" feature,
+                       a separate admin-only endpoint with explicit role check should
+                       be created. #}
+                    <a href="{{ url_for('transactions.transactions') }}" class="btn-link">VIEW MY TXNS</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="micro-label">RECENT TRANSACTION LOG (LAST 50)</span>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>TXN ID</th>
+                <th>TIMESTAMP</th>
+                <th>FROM</th>
+                <th>TO</th>
+                <th>AMOUNT</th>
+                <th>MEMO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for txn in transactions %}
+            <tr>
+                <td class="mono">#{{ txn.id }}</td>
+                <td class="muted">{{ txn.timestamp }}</td>
+                {# FIX: output encoding — sender/receiver names auto-escaped #}
+                <td>{{ txn.sender_name }} ({{ txn.sender_acct }})</td>
+                <td>{{ txn.receiver_name }} ({{ txn.receiver_acct }})</td>
+                <td class="accent mono">${{ "%.2f"|format(txn.amount) }}</td>
+                {# FIX: output encoding — | safe removed from memo.
+                   An admin viewing the transaction log should not have XSS payloads
+                   stored in memos executed in their privileged browser session. #}
+                <td class="memo-cell">{{ txn.memo }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

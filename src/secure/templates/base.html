@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}8TechBank{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {# FIX: CSP — Google Fonts whitelisted in the CSP style-src / font-src directives in app.py #}
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">8TECHBANK</h1>
+                <div class="version">v2.1.0</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard.dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+                    <span class="nav-icon">▣</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('transfer.transfer') }}" class="nav-item {% if request.endpoint == 'transfer.transfer' %}active{% endif %}">
+                    <span class="nav-icon">⇄</span>
+                    <span>Transfer</span>
+                </a>
+                <a href="{{ url_for('transactions.transactions') }}" class="nav-item {% if request.endpoint == 'transactions.transactions' %}active{% endif %}">
+                    <span class="nav-icon">≡</span>
+                    <span>Transactions</span>
+                </a>
+                <a href="{{ url_for('profile.profile') }}" class="nav-item {% if request.endpoint == 'profile.profile' %}active{% endif %}">
+                    <span class="nav-icon">◉</span>
+                    <span>Profile</span>
+                </a>
+                {# FIX: authorization — only render the Admin link for admin users
+                   to avoid exposing the route entry-point to regular users in the UI.
+                   The server-side role check in admin.py is the real enforcement. #}
+                {% if session.role == 'admin' %}
+                <a href="{{ url_for('admin.admin') }}" class="nav-item {% if request.endpoint == 'admin.admin' %}active{% endif %}">
+                    <span class="nav-icon">⚠</span>
+                    <span>Admin</span>
+                </a>
+                {% endif %}
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <span class="label">ACCOUNT</span>
+                    {# FIX: output encoding — Jinja2 auto-escapes by default (no | safe) #}
+                    <span class="account-badge">{{ session.account_number }}</span>
+                </div>
+                <div class="topbar-right">
+                    <div class="clock" id="liveClock">--:--:--</div>
+                    {# FIX: output encoding — display_name auto-escaped, not | safe #}
+                    <div class="user-pill">{{ session.display_name }}</div>
+                </div>
+            </header>
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

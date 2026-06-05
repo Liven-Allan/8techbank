@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — 8TechBank</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="error-body">
+    <div class="error-container">
+        <div class="error-header">
+            <span class="error-code">404</span>
+            <h1>UNHANDLED EXCEPTION — DEBUG MODE ACTIVE</h1>
+        </div>
+        <div class="error-meta">
+            <span class="micro-label">ERROR TYPE</span>
+            <span>NotFound</span>
+        </div>
+        <div class="error-meta">
+            <span class="micro-label">MESSAGE</span>
+            <span>{{ error }}</span>
+        </div>
+        <pre class="traceback">{{ error }}</pre>
+        <a href="/" class="btn btn-ghost">← RETURN TO PORTAL</a>
+    </div>
+</body>
+</html>
