@@ -1,18 +1,183 @@
 version: "3.9"
 
+
+networks:
+  frontend_net:
+    driver: bridge
+    internal: false        # nginx needs outbound access for TLS OCSP etc.
+  appdb_net:
+    driver: bridge
+    internal: true         # fully air-gapped from the host's uplink
+
+
+volumes:
+  db_data:                 # persistent SQLite / Postgres data
+
+
+secrets:
+  secret_key:
+    file: ./secrets/secret_key.txt    # populate before first `docker compose up`
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+
+
 services:
-  8techbank:
-    build: .
-    container_name: 8techbank_app
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./data:/app/data
-      - ./static:/app/static
-      - ./templates:/app/templates
-    environment:
-      FLASK_ENV: development
-      FLASK_DEBUG: "1"
-      SECRET_KEY: bank123
-      DATABASE_PATH: /app/data/8techbank.db
+
+  # ── Tier 1: Reverse proxy ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: 8techbank_nginx
     restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"           # TLS termination here; upstream to app is plain HTTP
+
+    networks:
+      - frontend_net        # nginx only; cannot reach appdb_net
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro   # read-only config
+      - ./nginx/certs:/etc/nginx/certs:ro             # TLS certificates
+
+    # ── Filesystem hardening ─────────────────────────────────────────────────
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+
+    # ── Privilege hardening ──────────────────────────────────────────────────
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE   # required to bind ports 80 / 443
+
+    # ── Resource limits ──────────────────────────────────────────────────────
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+        reservations:
+          memory: 64M
+    pids_limit: 50
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
+
+  # ── Tier 2: Application server ────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: 8techbank_app
+    restart: unless-stopped
+
+    # No host port mapping – only reachable via nginx on frontend_net
+    expose:
+      - "5000"
+
+    networks:
+      - frontend_net        # receives requests from nginx
+      - appdb_net           # sends queries to db
+
+    # ── Runtime secrets injected via Docker secrets ───────────────────────────
+    secrets:
+      - secret_key
+      - jwt_secret
+
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: "0"
+      # Secrets are read from the mounted secret files, not env vars.
+      # app.py should be updated to read:
+      #   open('/run/secrets/secret_key').read().strip()
+      DATABASE_PATH: /app/data/8techbank.db
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_EXPIRES: "900"
+      JWT_REFRESH_EXPIRES: "604800"
+
+    # ── Filesystem hardening ─────────────────────────────────────────────────
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid    # Flask/Werkzeug scratch space
+    volumes:
+      - db_data:/app/data              # sole writable persistent path
+
+    # ── Privilege hardening ──────────────────────────────────────────────────
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # No cap_add needed – port 5000 does not require CAP_NET_BIND_SERVICE
+
+    # ── Resource limits ──────────────────────────────────────────────────────
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 256M
+        reservations:
+          memory: 128M
+    pids_limit: 50
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
+
+    depends_on:
+      - db
+
+  # ── Tier 3: Database ─────────────────────────────────────────────────────
+  # NOTE: The current 8TechBank uses an embedded SQLite file, which does not
+  # need a separate container. The service below is included to demonstrate the
+  # network-segmentation design for a production-grade RDBMS upgrade
+  # (e.g. PostgreSQL). Remove this block if staying with SQLite.
+  db:
+    image: postgres:16-alpine
+    container_name: 8techbank_db
+    restart: unless-stopped
+
+    # No host port – only reachable from app via appdb_net
+    networks:
+      - appdb_net           # isolated; nginx cannot route here
+
+    environment:
+      POSTGRES_DB: 8techbank
+      POSTGRES_USER: appuser
+      # Password supplied via Docker secret; not hardcoded here.
+      POSTGRES_PASSWORD_FILE: /run/secrets/secret_key   # reuse or add dedicated db_password secret
+
+    secrets:
+      - secret_key
+
+    # ── Filesystem hardening ─────────────────────────────────────────────────
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+      - /var/run/postgresql:size=16m,noexec,nosuid   # Postgres needs this writable
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+    # ── Privilege hardening ──────────────────────────────────────────────────
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    # ── Resource limits ──────────────────────────────────────────────────────
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          memory: 128M
+    pids_limit: 50
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
