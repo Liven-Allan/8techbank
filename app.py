@@ -96,4 +96,4 @@ if __name__ == '__main__':
     else:
         print(f"[8TechBank] DB found at {DATABASE_PATH}. Skipping init.")
 
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
