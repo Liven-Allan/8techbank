@@ -328,9 +328,8 @@ def api_auth_token():
       - Parameterised DB query prevents SQL injection.
       - Identical 401 response for "unknown user" and "wrong password" prevents
         username enumeration.
-      - Plaintext password comparison is intentional in this demo; production
-        MUST use bcrypt / argon2 with constant-time comparison (e.g. werkzeug
-        check_password_hash).
+      - Passwords are verified using a secure hash comparison (werkzeug.check_password_hash).
+      - Ensure user passwords are stored hashed (e.g., werkzeug.generate_password_hash).
     """
     # ── Parse body ────────────────────────────
     # Use `is None` check (not `not data`) so that an empty JSON object {}
