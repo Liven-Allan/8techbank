@@ -13,7 +13,7 @@ def admin():
     # Enforce role-based access control: only admin users may view this page.
     if session.get('role') != 'admin':
         # Authenticated but not authorised — return 403 Forbidden.
-        return abort(403)
+        abort(403)
 
     search = request.args.get('search', '')
 
