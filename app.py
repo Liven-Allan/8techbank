@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from database import init_db, seed_db, DATABASE_PATH
 
 app = Flask(__name__)
@@ -28,11 +28,33 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(api_bp)
 
+# ----- VULNERABLE SEARCH ROUTE (Reflected XSS) for Task 2 -----
+@app.route('/search')
+def search():
+    query = request.args.get('q', '')
+    # VULNERABLE: user input rendered without any encoding
+    return f'<h2>Search Results for: {query}</h2><p>No results found.</p>'
+# ----- END SEARCH ROUTE -----
+
+# VULNERABLE IDOR endpoint – no authorization check
+@app.route('/account/<int:account_id>')
+def view_account(account_id):
+    from database import raw_query
+    account = raw_query(f"SELECT * FROM users WHERE id={account_id}", fetchone=True)
+    if not account:
+        return "Account not found", 404
+    return f"""
+    <h2>Account Details (ID: {account_id})</h2>
+    <p>Username: {account['username']}</p>
+    <p>Email: {account['email']}</p>
+    <p>Balance: ${account['balance']}</p>
+    <p>Account Number: {account['account_number']}</p>
+    <p>Role: {account['role']}</p>
+    """
 
 @app.errorhandler(404)
 def not_found(e):
     return render_template('404.html', error=str(e)), 404
-
 
 @app.errorhandler(500)
 def server_error(e):
@@ -40,9 +62,7 @@ def server_error(e):
     tb = traceback.format_exc()
     return render_template('500.html', error=str(e), traceback=tb), 500
 
-
 if __name__ == '__main__':
-    # Auto-initialize DB if missing — works on first docker compose up
     if not os.path.exists(DATABASE_PATH):
         print(f"[8TechBank] DB not found at {DATABASE_PATH}. Initializing...")
         init_db()
