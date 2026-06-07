@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — 8TechBank{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">DASHBOARD</h2>
+    <span class="page-subtitle">Account Overview</span>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="micro-label">CURRENT BALANCE</div>
+        <div class="stat-value accent" id="balanceCounter" data-balance="{{ user.balance }}">$0.00</div>
+        <div class="stat-meta">USD · AVAILABLE</div>
+    </div>
+    <div class="stat-card">
+        <div class="micro-label">ACCOUNT NUMBER</div>
+        {# FIX: output encoding — auto-escaped, no | safe #}
+        <div class="stat-value mono">{{ user.account_number }}</div>
+        <div class="stat-meta">ROUTING: 8TB-MAIN-01</div>
+    </div>
+    <div class="stat-card">
+        <div class="micro-label">ACCOUNT STATUS</div>
+        <div class="stat-value"><span class="badge badge-active">ACTIVE</span></div>
+        <div class="stat-meta">SINCE {{ user.created_at[:10] }}</div>
+    </div>
+</div>
+
+<div class="split-layout">
+    <div class="split-left">
+        <div class="card">
+            <div class="card-header">
+                <span class="micro-label">RECENT TRANSACTIONS</span>
+                <a href="{{ url_for('transactions.transactions') }}" class="card-link">VIEW ALL →</a>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>TXN ID</th>
+                        <th>TIMESTAMP</th>
+                        <th>COUNTERPARTY</th>
+                        <th>MEMO</th>
+                        <th>AMOUNT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in transactions %}
+                    <tr>
+                        <td class="mono">#{{ txn.id }}</td>
+                        <td class="muted">{{ txn.timestamp[:16] }}</td>
+                        <td>
+                            {% if txn.sender_id == user.id %}
+                                <span class="badge badge-out">OUT</span> {{ txn.receiver_name }}
+                            {% else %}
+                                <span class="badge badge-in">IN</span> {{ txn.sender_name }}
+                            {% endif %}
+                        </td>
+                        {# FIX: output encoding — | safe removed from memo.
+                           Previously a transfer memo containing <script>alert(1)</script>
+                           would execute in every user's browser that visited the dashboard.
+                           Jinja2 auto-escaping converts < > " & to HTML entities. #}
+                        <td class="memo-cell">{{ txn.memo }}</td>
+                        <td class="{% if txn.sender_id == user.id %}amount-out{% else %}amount-in{% endif %}">
+                            {% if txn.sender_id == user.id %}-{% else %}+{% endif %}${{ "%.2f"|format(txn.amount) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="muted center">No transactions yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="split-right">
+        <div class="card">
+            <div class="card-header">
+                <span class="micro-label">QUICK TRANSFER</span>
+            </div>
+            {# FIX: CSRF protection — quick transfer form also needs the token #}
+            <form method="POST" action="{{ url_for('transfer.transfer') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label class="micro-label">RECIPIENT ACCOUNT</label>
+                    <input type="text" name="recipient_account" class="form-input" placeholder="8TB-XXXXXX" id="quickRecipient">
+                </div>
+                <div class="form-group">
+                    <label class="micro-label">AMOUNT (USD)</label>
+                    <input type="number" name="amount" class="form-input" placeholder="0.00" step="0.01" min="0.01" id="quickAmount">
+                </div>
+                <div class="form-group">
+                    <label class="micro-label">MEMO</label>
+                    <input type="text" name="memo" class="form-input" placeholder="Payment note...">
+                </div>
+                <input type="hidden" name="action" value="preview">
+                <button type="submit" class="btn btn-primary btn-full">INITIATE TRANSFER →</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
