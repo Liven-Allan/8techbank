@@ -1,1 +1,4 @@
 flask==3.0.3
+PyJWT==2.8.0
+Flask-Limiter==2.8.0
+marshmallow==3.19.0

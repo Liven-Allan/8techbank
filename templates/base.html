@@ -33,10 +33,12 @@
                     <span class="nav-icon">◉</span>
                     <span>Profile</span>
                 </a>
+                {% if session.get('role') == 'admin' %}
                 <a href="{{ url_for('admin.admin') }}" class="nav-item {% if request.endpoint == 'admin.admin' %}active{% endif %}">
                     <span class="nav-icon">⚠</span>
                     <span>Admin</span>
                 </a>
+                {% endif %}
             </nav>
             <div class="sidebar-footer">
                 <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
@@ -59,5 +61,14 @@
         </main>
     </div>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script>
+        // When navigating via back/forward cache, force a reload so server-side
+        // session checks run and unauthenticated users are redirected to login.
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
 </body>
 </html>

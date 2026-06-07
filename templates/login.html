@@ -55,6 +55,34 @@
                     </div>
                     <button type="submit" class="btn btn-primary btn-full">AUTHENTICATE</button>
                 </form>
+                <script>
+                    (function () {
+                        const form = document.querySelector('form');
+                        const usernameField = form.querySelector('input[name="username"]');
+                        const passwordField = form.querySelector('input[name="password"]');
+
+                        form.addEventListener('submit', function (e) {
+                            const u = usernameField.value.trim();
+                            const p = passwordField.value;
+                            if (u.length === 0 || p.length === 0) {
+                                alert('All fields are required.');
+                                e.preventDefault();
+                                return;
+                            }
+                            if (u.length > 150) {
+                                alert('Username exceeds maximum length (150).');
+                                e.preventDefault();
+                                return;
+                            }
+                            const valid = /^[A-Za-z0-9_.-]{1,150}$/.test(u);
+                            if (!valid) {
+                                alert('Username contains invalid characters. Only letters, numbers, dot, underscore and hyphen are allowed.');
+                                e.preventDefault();
+                                return;
+                            }
+                        });
+                    })();
+                </script>
                 <div class="auth-footer">
                     <a href="{{ url_for('auth.register') }}">Create new account →</a>
                 </div>
